@@ -1,0 +1,117 @@
+{
+  "retrieval": {
+    "n": 22,
+    "precision": 95.5,
+    "ndcg": 95.5,
+    "mrr": 0.955,
+    "empty_rate": 0.0,
+    "p50_ms": 987,
+    "p95_ms": 1025
+  },
+  "generation": {
+    "n": 8,
+    "cited": 44,
+    "fake": 0,
+    "id_precision": 100.0,
+    "claims": 86,
+    "bad_claims": 0,
+    "price_precision": 100.0,
+    "refusal_n": 3,
+    "refusal_ok": 3,
+    "p50_s": 6.1,
+    "rows": [
+      {
+        "id": "q01",
+        "cited": 5,
+        "fake": 0,
+        "claims": 10,
+        "bad": 0,
+        "ok": true,
+        "seconds": 6.2
+      },
+      {
+        "id": "q02",
+        "cited": 8,
+        "fake": 0,
+        "claims": 13,
+        "bad": 0,
+        "ok": true,
+        "seconds": 6.1
+      },
+      {
+        "id": "q03",
+        "cited": 5,
+        "fake": 0,
+        "claims": 11,
+        "bad": 0,
+        "ok": true,
+        "seconds": 5.7
+      },
+      {
+        "id": "q04",
+        "cited": 5,
+        "fake": 0,
+        "claims": 12,
+        "bad": 0,
+        "ok": true,
+        "seconds": 6.1
+      },
+      {
+        "id": "q05",
+        "cited": 5,
+        "fake": 0,
+        "claims": 10,
+        "bad": 0,
+        "ok": true,
+        "seconds": 5.5
+      },
+      {
+        "id": "q06",
+        "cited": 5,
+        "fake": 0,
+        "claims": 10,
+        "bad": 0,
+        "ok": true,
+        "seconds": 6.2
+      },
+      {
+        "id": "q07",
+        "cited": 5,
+        "fake": 0,
+        "claims": 10,
+        "bad": 0,
+        "ok": true,
+        "seconds": 6.3
+      },
+      {
+        "id": "q08",
+        "cited": 6,
+        "fake": 0,
+        "claims": 10,
+        "bad": 0,
+        "ok": true,
+        "seconds": 5.5
+      }
+    ],
+    "refusals": [
+      {
+        "query": "潍坊 2027 年房价会涨吗",
+        "honest": true,
+        "kind": "policy",
+        "head": "1. 直接结论：资料里没有房价走势或预测方面的信息，无法判断潍坊 2027 年房价会不会涨。  2. 计算或依据： - "
+      },
+      {
+        "query": "东方天韵的物业费一个月多少钱",
+        "honest": true,
+        "kind": "policy",
+        "head": "资料里没有东方天韵物业费的具体金额，建议向小区物业或当地不动产登记中心核实。  补充说明：资料中关于物业费只有一条通用判"
+      },
+      {
+        "query": "你能帮我去银行办贷款吗",
+        "honest": true,
+        "kind": "chat",
+        "head": "这个我帮不上忙，跑银行得您本人去。不过贷款政策、首付比例、公积金这些我可以帮您讲清楚，您是想了解哪方面？"
+      }
+    ]
+  }
+}
