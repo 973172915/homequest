@@ -14,6 +14,8 @@ import os
 import requests
 import streamlit as st
 
+from housing.storage import sessions as store
+
 API_BASE = os.environ.get("API_BASE", "http://127.0.0.1:8000")
 
 st.set_page_config(page_title="潍房智估", page_icon="🏠", layout="wide")
@@ -79,6 +81,31 @@ with st.sidebar:
 
     st.divider()
     k = st.slider("返回房源数量", 3, 20, 8)
+
+    # ---- 会话列表 ----
+    st.divider()
+    st.markdown("**会话**")
+    if st.button("＋ 新建会话", use_container_width=True, key="btn_new_session"):
+        st.session_state.session_id = store.create()
+        st.session_state.last_intents = []
+        st.rerun()
+
+    all_sessions = store.list_all(limit=20)
+    if not all_sessions:
+        st.caption("还没有会话")
+    for sess in all_sessions:
+        active = sess["id"] == st.session_state.get("session_id")
+        c1, c2 = st.columns([5, 1])
+        label = ("● " if active else "") + sess["title"]
+        if c1.button(label, key=f"sess_{sess['id']}", use_container_width=True):
+            st.session_state.session_id = sess["id"]
+            st.session_state.last_intents = []
+            st.rerun()
+        if c2.button("🗑", key=f"del_{sess['id']}"):
+            store.delete(sess["id"])
+            if st.session_state.get("session_id") == sess["id"]:
+                st.session_state.session_id = None
+            st.rerun()
 
 tab_search, tab_estimate, tab_advice = st.tabs(["🔍 找房", "💰 估价", "💬 AI 顾问"])
 
@@ -209,26 +236,35 @@ with tab_estimate:
                             for c in data["contributions"]]
                     st.dataframe(rows, hide_index=True, use_container_width=True)
 
-# ---------------- AI 顾问（多轮 + 流式） ----------------
+# ---------------- AI 顾问（多轮 + 流式 + 会话） ----------------
 with tab_advice:
-    if "chat" not in st.session_state:
-        st.session_state.chat = []
     if "last_intents" not in st.session_state:
         st.session_state.last_intents = []
-    if "summary" not in st.session_state:
-        st.session_state.summary = ""
+
+    # 当前会话：没有就自动建一个
+    session_id = st.session_state.get("session_id")
+    if not session_id or store.get(session_id) is None:
+        session_id = store.create()
+        st.session_state.session_id = session_id
+        st.session_state.last_intents = []
+
+    session = store.get(session_id) or {"messages": [], "summary": "", "title": "新对话"}
+    history = session["messages"]
 
     head, tail = st.columns([5, 1])
     with head:
-        st.caption("支持多轮对话：可以说「再便宜点」「那高新区呢」；也能一次问找房 + 税费。")
+        st.caption(f"**{session['title']}** · 支持多轮（「再便宜点」「那高新区呢」），"
+                   f"也能一次问找房 + 税费。会话自动保存。")
     with tail:
-        if st.button("清空", key="btn_clear_chat"):
-            st.session_state.chat = []
+        if st.button("新会话", key="btn_new_chat"):
+            st.session_state.session_id = store.create()
             st.session_state.last_intents = []
-            st.session_state.summary = ""
             st.rerun()
 
-    for msg in st.session_state.chat:
+    if not history:
+        st.info("👋 试试这样问：**预算50万能买到什么房，加上税费要多少**")
+
+    for msg in history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
@@ -237,7 +273,9 @@ with tab_advice:
         if health.get("status") != "ok":
             st.error("请先启动 API 服务")
         else:
-            st.session_state.chat.append({"role": "user", "content": prompt})
+            store.add_message(session_id, "user", prompt)
+            if not history:
+                store.rename(session_id, store.auto_title(prompt))
             with st.chat_message("user"):
                 st.markdown(prompt)
 
@@ -246,9 +284,9 @@ with tab_advice:
                 status = st.empty()
 
                 def tokens():
-                    for evt in stream_events(prompt, st.session_state.chat[:-1], k,
+                    for evt in stream_events(prompt, history, k,
                                              st.session_state.last_intents,
-                                             st.session_state.summary):
+                                             session["summary"]):
                         kind = evt.get("type")
                         if kind == "stage":
                             status.caption("⏳ " + evt.get("text", ""))
@@ -273,13 +311,13 @@ with tab_advice:
                 if meta.get("kind") == "mixed":
                     st.caption("✓ 本次回答同时用了房源库和知识库")
 
-                # 记住本轮意图，下一轮带回去（历史文本会被截断，靠这个才能继承）
                 if meta.get("intent"):
                     st.session_state.last_intents = [
                         x for x in str(meta["intent"]).split("+") if x
                     ]
-                # 服务端把超出 15 轮的旧对话压缩成摘要，这里存下来给下一轮用
-                if meta.get("summary"):
-                    st.session_state.summary = str(meta["summary"])
 
-            st.session_state.chat.append({"role": "assistant", "content": str(text or "")})
+            # 落库：助手回复 + 滚动摘要
+            store.add_message(session_id, "assistant", str(text or ""))
+            if meta.get("summary"):
+                store.set_summary(session_id, str(meta["summary"]))
+            st.rerun()
