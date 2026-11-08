@@ -28,3 +28,8 @@ Thumbs.db
 chroma_ascii_*/
 torchinductor_*/
 .hidden/
+
+# pytest 临时目录（TMP 指到工作区时会生成）
+pytest-of-*/
+pytest-*/
+
