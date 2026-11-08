@@ -1,0 +1,30 @@
+# 环境
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+
+# 密钥
+.env
+.env.local
+
+# 生成物（可重建，不进仓库）
+artifacts/
+data/processed/
+*.parquet
+*.pkl
+chroma/
+
+# 全量原始数据不入库（仓库只带 data/sample_2000.csv）
+data/sh_data.csv
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 本机运行时缓存（删不掉就忽略）
+chroma_ascii_*/
+torchinductor_*/
+.hidden/

@@ -1,0 +1,36 @@
+# 运行时依赖（Python 3.12）
+# 安装：uv pip install -r requirements.txt
+# 注意：torch 建议单独用 CPU 源装，见 README 的「安装」
+
+# 数据处理
+pandas>=2.2
+numpy>=1.26
+pyarrow>=17.0
+
+# RAG / LangChain 1.x
+langchain>=1.0
+langchain-core>=1.0
+langchain-classic>=1.0
+langchain-community>=0.4
+langchain-text-splitters>=1.0
+langchain-huggingface>=1.0
+langchain-openai>=1.0
+rank-bm25>=0.2.2
+
+# 向量检索（Chroma 1.5 的 Rust 后端在本机不可用，改用 FAISS）
+faiss-cpu>=1.9
+
+# 向量化
+sentence-transformers>=3.0
+
+# 配置与服务
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+fastapi>=0.115
+uvicorn[standard]>=0.30
+streamlit>=1.40
+
+# 开发
+ruff>=0.6
+pytest>=8.0

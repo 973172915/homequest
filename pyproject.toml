@@ -1,0 +1,25 @@
+[project]
+name = "housing-ai"
+version = "0.1.0"
+description = "潍坊二手房 AI 选房助手：LangChain + FAISS + DeepSeek"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+# 脚本要先把项目根加进 sys.path，再 import 本地包，E402 必然触发
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*.py" = ["E402"]
+"eval/*.py" = ["E402"]
+"tests/*.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# artifacts 里有 uv 缓存和第三方包源码，不能被 pytest 扫到
+norecursedirs = ["artifacts", ".venv", "data", "docs", "chroma_ascii_*", "torchinductor_*"]
+filterwarnings = ["ignore::DeprecationWarning"]

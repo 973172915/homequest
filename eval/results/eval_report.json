@@ -1,0 +1,361 @@
+{
+  "generated_at": "2026-11-07 16:44:22",
+  "dataset": {
+    "total": 30,
+    "size": 18332
+  },
+  "parse": {
+    "total": 22,
+    "exact_match": 22,
+    "exact_rate": 100.0,
+    "per_field": {
+      "community": {
+        "n": 2,
+        "ok": 2,
+        "rate": 100.0
+      },
+      "decoration": {
+        "n": 7,
+        "ok": 7,
+        "rate": 100.0
+      },
+      "district": {
+        "n": 18,
+        "ok": 18,
+        "rate": 100.0
+      },
+      "elevator": {
+        "n": 3,
+        "ok": 3,
+        "rate": 100.0
+      },
+      "max_area": {
+        "n": 6,
+        "ok": 6,
+        "rate": 100.0
+      },
+      "max_price": {
+        "n": 18,
+        "ok": 18,
+        "rate": 100.0
+      },
+      "nearby": {
+        "n": 4,
+        "ok": 4,
+        "rate": 100.0
+      },
+      "rooms": {
+        "n": 21,
+        "ok": 21,
+        "rate": 100.0
+      },
+      "south_north": {
+        "n": 6,
+        "ok": 6,
+        "rate": 100.0
+      }
+    },
+    "failures": []
+  },
+  "retrieval": {
+    "total": 22,
+    "all_satisfied": 21,
+    "all_satisfied_rate": 95.5,
+    "constraint_satisfaction": 95.3,
+    "strict_total": 21,
+    "strict_ok": 21,
+    "strict_rate": 100.0,
+    "relaxed_cases": [
+      {
+        "id": "q09",
+        "query": "东方天韵 90平左右 精装",
+        "relaxed": [
+          "community"
+        ]
+      }
+    ],
+    "latency_p50_ms": 946.0,
+    "latency_p95_ms": 981.0
+  },
+  "retrieval_rows": [
+    {
+      "id": "q01",
+      "query": "奎文区 100平以内 南北通透 精装两居 预算80万",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q02",
+      "query": "高新区 总价150万 三室 有电梯 南北通透",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q03",
+      "query": "万达附近 预算60万 两居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q04",
+      "query": "潍城区 预算100万 三室 毛坯",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q05",
+      "query": "坊子区 120平以下 两室 简装",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q06",
+      "query": "寒亭区 80万以内 带电梯的两居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q07",
+      "query": "寿光市 预算50万 两居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q08",
+      "query": "青州市 三室 110平左右",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q09",
+      "query": "东方天韵 90平左右 精装",
+      "returned": 10,
+      "satisfied": 0,
+      "rate": 0.0,
+      "all_ok": false,
+      "relaxed": [
+        "community"
+      ]
+    },
+    {
+      "id": "q10",
+      "query": "奎文区 万达 预算70万 两居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q11",
+      "query": "经济开发区 60万 两室 南北通透",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q12",
+      "query": "高新 预算200万 四室",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q13",
+      "query": "奎文区 120平 三室 预算130万",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q14",
+      "query": "潍城区 预算45万 一居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q15",
+      "query": "坊子区 三室 预算90万 南北通透",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q16",
+      "query": "恒大名都 三室 预算120万",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q17",
+      "query": "奎文区 南北通透 精装 三室 150平以内",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q18",
+      "query": "寒亭区 南部新区 预算70万 两居",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q19",
+      "query": "潍城区 毛坯 两居 预算60万 有电梯",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q20",
+      "query": "高新实验附近 三室 预算140万",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q21",
+      "query": "青州市 精装 两居 预算40万",
+      "returned": 2,
+      "satisfied": 2,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    },
+    {
+      "id": "q22",
+      "query": "寿光市 南北通透 三居 预算80万",
+      "returned": 10,
+      "satisfied": 10,
+      "rate": 100.0,
+      "all_ok": true,
+      "relaxed": []
+    }
+  ],
+  "generation": {
+    "n": 6,
+    "clean": 6,
+    "clean_rate": 100.0,
+    "details": [
+      {
+        "id": "q01",
+        "query": "奎文区 100平以内 南北通透 精装两居 预算80万",
+        "chars": 1021,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 10,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 6.0,
+        "mode": "llm"
+      },
+      {
+        "id": "q02",
+        "query": "高新区 总价150万 三室 有电梯 南北通透",
+        "chars": 1074,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 11,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 5.5,
+        "mode": "llm"
+      },
+      {
+        "id": "q03",
+        "query": "万达附近 预算60万 两居",
+        "chars": 1035,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 12,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 5.6,
+        "mode": "llm"
+      },
+      {
+        "id": "q04",
+        "query": "潍城区 预算100万 三室 毛坯",
+        "chars": 1130,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 14,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 5.4,
+        "mode": "llm"
+      },
+      {
+        "id": "q05",
+        "query": "坊子区 120平以下 两室 简装",
+        "chars": 1021,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 10,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 5.2,
+        "mode": "llm"
+      },
+      {
+        "id": "q06",
+        "query": "寒亭区 80万以内 带电梯的两居",
+        "chars": 1117,
+        "cited": 5,
+        "fake_ids": [],
+        "price_claims": 13,
+        "bad_prices": [],
+        "ok": true,
+        "seconds": 5.8,
+        "mode": "llm"
+      }
+    ]
+  }
+}

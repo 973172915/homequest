@@ -1,0 +1,30 @@
+{"id": "q01", "type": "listing", "query": "奎文区 100平以内 南北通透 精装两居 预算80万", "expect": {"district": "奎文区", "max_area": 100, "rooms": 2, "south_north": true, "decoration": "精装", "max_price": 80}, "note": "多条件组合，最典型的找房问法"}
+{"id": "q02", "type": "listing", "query": "高新区 总价150万 三室 有电梯 南北通透", "expect": {"district": "高新技术产业开发区", "max_price": 150, "rooms": 3, "elevator": true, "south_north": true}, "note": "考区县简称「高新区」能否映射到正式名"}
+{"id": "q03", "type": "listing", "query": "万达附近 预算60万 两居", "expect": {"nearby": "万达", "max_price": 60, "rooms": 2}, "note": "商圈检索"}
+{"id": "q04", "type": "listing", "query": "潍城区 预算100万 三室 毛坯", "expect": {"district": "潍城区", "max_price": 100, "rooms": 3, "decoration": "毛坯"}, "note": "装修筛选"}
+{"id": "q05", "type": "listing", "query": "坊子区 120平以下 两室 简装", "expect": {"district": "坊子区", "max_area": 120, "rooms": 2, "decoration": "简装"}, "note": "面积上限 + 装修"}
+{"id": "q06", "type": "listing", "query": "寒亭区 80万以内 带电梯的两居", "expect": {"district": "寒亭区", "max_price": 80, "rooms": 2, "elevator": true}, "note": "电梯硬条件"}
+{"id": "q07", "type": "listing", "query": "寿光市 预算50万 两居", "expect": {"district": "寿光市", "max_price": 50, "rooms": 2}, "note": "县级市样本，价格分布与市区不同"}
+{"id": "q08", "type": "listing", "query": "青州市 三室 110平左右", "expect": {"district": "青州市", "rooms": 3, "max_area": 110}, "note": "「左右」应解析为区间"}
+{"id": "q09", "type": "listing", "query": "东方天韵 90平左右 精装", "expect": {"community": "东方天韵", "max_area": 90, "decoration": "精装"}, "note": "点名小区，考小区识别"}
+{"id": "q10", "type": "listing", "query": "奎文区 万达 预算70万 两居", "expect": {"district": "奎文区", "nearby": "万达", "max_price": 70, "rooms": 2}, "note": "区县 + 商圈双层过滤"}
+{"id": "q11", "type": "listing", "query": "经济开发区 60万 两室 南北通透", "expect": {"district": "经济技术开发区", "max_price": 60, "rooms": 2, "south_north": true}, "note": "另一处区县全称"}
+{"id": "q12", "type": "listing", "query": "高新 预算200万 四室", "expect": {"district": "高新技术产业开发区", "max_price": 200, "rooms": 4}, "note": "简称 + 大户型"}
+{"id": "q13", "type": "listing", "query": "奎文区 120平 三室 预算130万", "expect": {"district": "奎文区", "max_area": 120, "rooms": 3, "max_price": 130}, "note": "面积 + 预算双约束"}
+{"id": "q14", "type": "listing", "query": "潍城区 预算45万 一居", "expect": {"district": "潍城区", "max_price": 45, "rooms": 1}, "note": "低总价小户型，样本少"}
+{"id": "q15", "type": "listing", "query": "坊子区 三室 预算90万 南北通透", "expect": {"district": "坊子区", "rooms": 3, "max_price": 90, "south_north": true}, "note": "三条件组合"}
+{"id": "q16", "type": "listing", "query": "恒大名都 三室 预算120万", "expect": {"community": "恒大名都", "rooms": 3, "max_price": 120}, "note": "样本量最多的小区"}
+{"id": "q17", "type": "listing", "query": "奎文区 南北通透 精装 三室 150平以内", "expect": {"district": "奎文区", "south_north": true, "decoration": "精装", "rooms": 3, "max_area": 150}, "note": "四项条件，不加预算"}
+{"id": "q18", "type": "listing", "query": "寒亭区 南部新区 预算70万 两居", "expect": {"district": "寒亭区", "nearby": "南部新区", "max_price": 70, "rooms": 2}, "note": "片区名 + 预算"}
+{"id": "q19", "type": "listing", "query": "潍城区 毛坯 两居 预算60万 有电梯", "expect": {"district": "潍城区", "decoration": "毛坯", "rooms": 2, "max_price": 60, "elevator": true}, "note": "五项条件叠加，考过滤严格度"}
+{"id": "q20", "type": "listing", "query": "高新实验附近 三室 预算140万", "expect": {"nearby": "高新实验", "rooms": 3, "max_price": 140}, "note": "学校名作为商圈"}
+{"id": "q21", "type": "listing", "query": "青州市 精装 两居 预算40万", "expect": {"district": "青州市", "decoration": "精装", "rooms": 2, "max_price": 40}, "note": "低预算 + 精装，考是否会无结果"}
+{"id": "q22", "type": "listing", "query": "寿光市 南北通透 三居 预算80万", "expect": {"district": "寿光市", "south_north": true, "rooms": 3, "max_price": 80}, "note": "「三居」与「三室」同义"}
+{"id": "q23", "type": "policy", "query": "买一套100万的二手房，满两年，契税要交多少", "expect": {"kind": "policy"}, "note": "税费计算，考知识库命中"}
+{"id": "q24", "type": "policy", "query": "满二和满五唯一有什么区别", "expect": {"kind": "policy"}, "note": "概念区分"}
+{"id": "q25", "type": "policy", "query": "首套房首付比例是多少", "expect": {"kind": "policy"}, "note": "贷款政策"}
+{"id": "q26", "type": "policy", "query": "公积金贷款最多能贷多少", "expect": {"kind": "policy"}, "note": "公积金额度"}
+{"id": "q27", "type": "policy", "query": "二手房过户流程要多久", "expect": {"kind": "policy"}, "note": "流程类"}
+{"id": "q28", "type": "policy", "query": "房改房能买吗，要注意什么", "expect": {"kind": "policy"}, "note": "特殊产权"}
+{"id": "q29", "type": "policy", "query": "得房率和公摊怎么算", "expect": {"kind": "policy"}, "note": "选房常识"}
+{"id": "q30", "type": "policy", "query": "外地户口在潍坊买房需要什么材料", "expect": {"kind": "policy"}, "note": "购房资格"}

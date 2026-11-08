@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    image: housing-ai:latest
+    ports:
+      - "8000:8000"   # API
+      - "8501:8501"   # 界面
+    # 不把 .env 打进镜像，改为从宿主机环境变量注入（.env 里的变量 compose 会自动读取）
+    environment:
+      - APP_HOST=0.0.0.0          # 容器内必须监听所有网卡，否则端口映射进不来
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-flash}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_REASONING_EFFORT=${DEEPSEEK_REASONING_EFFORT:-none}
+    volumes:
+      - ./artifacts:/app/artifacts   # 向量索引、清洗结果、HF 模型缓存都落在这里
+      - ./data:/app/data
+    restart: unless-stopped

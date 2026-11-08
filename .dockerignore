@@ -1,0 +1,13 @@
+.venv/
+artifacts/
+__pycache__/
+*.pyc
+*.parquet
+.git/
+.gitignore
+.env
+.env.local
+eval/results/
+docs/
+chroma_ascii_*/
+torchinductor_*/
