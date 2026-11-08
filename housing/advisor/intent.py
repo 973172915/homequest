@@ -130,15 +130,35 @@ def _default_filters() -> SearchFilters:
     return SearchFilters()
 
 
+def _normalize_district(name: str) -> str:
+    """模型可能返回「高新区」「奎文」这类简称，统一成数据里的正式名。
+
+    不做归一化的话，用户说「高新区」，filters 里就是「高新区」，
+    而房源数据里存的是「高新技术产业开发区」，硬过滤直接零结果。
+    """
+    from housing.search.retriever import DISTRICT_ALIASES, DISTRICT_CANONICAL
+
+    text = (name or "").strip()
+    if not text or text in DISTRICT_CANONICAL:
+        return text
+    if text in DISTRICT_ALIASES:
+        return DISTRICT_ALIASES[text]
+    for alias, canonical in sorted(DISTRICT_ALIASES.items(), key=lambda x: -len(x[0])):
+        if alias in text:
+            return canonical
+    return text
+
+
 def _to_filters(data: dict) -> SearchFilters:
-    """把模型输出的 filters 转成 SearchFilters，顺带做数值校验。"""
+    """把模型输出的 filters 转成 SearchFilters，顺带做数值校验与区县归一化。"""
     raw = data.get("filters") or {}
     f = SearchFilters()
 
     for key in ("district", "nearby", "community", "decoration"):
         value = raw.get(key)
         if isinstance(value, str) and value.strip() and value.strip() != "null":
-            setattr(f, key, value.strip())
+            text = value.strip()
+            setattr(f, key, _normalize_district(text) if key == "district" else text)
 
     for key in ("min_price", "max_price", "min_area", "max_area"):
         value = raw.get(key)

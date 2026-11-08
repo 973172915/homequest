@@ -1,0 +1,9 @@
+{
+  "intent_rate": 100.0,
+  "slot_rate": 100.0,
+  "multi_rate": 100.0,
+  "retrieval_rate": 95.5,
+  "retrieval_p50_ms": 974,
+  "retrieval_p95_ms": 1001,
+  "generation_rate": 100.0
+}
