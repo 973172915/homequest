@@ -38,13 +38,16 @@ def split_knowledge_documents(
     docs: list[Document] = []
     for path in sorted(src.glob("*.md")):
         text = path.read_text(encoding="utf-8")
+        title = path.stem.split("-", 1)[-1]
         for i, chunk in enumerate(splitter.split_text(text)):
             docs.append(
                 Document(
-                    page_content=chunk,
+                    # 标题写进正文：切块后单看正文容易丢失主题，
+                    # 加上「【税费】」这类前缀能让向量更准地理解这一段在讲什么
+                    page_content=f"【{title}】{chunk}",
                     metadata={
                         "doc_id": path.stem,
-                        "title": path.stem.split("-", 1)[-1],
+                        "title": title,
                         "chunk_index": i,
                         "source": path.name,
                         "type": "knowledge",

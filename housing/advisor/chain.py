@@ -1,4 +1,4 @@
-"""顾问链：一句人话 → 检索 → 生成 → 带引用的回答。
+﻿"""顾问链：一句人话 → 检索 → 生成 → 带引用的回答。
 
 两条支路：
 - 找房类问题 → 房源库（混合检索）
@@ -119,7 +119,7 @@ def answer(query: str, k: int | None = None) -> AdvisorResult:
     filters = parse_query(query)
 
     if is_policy_query(query, filters):
-        docs = search_knowledge(query, k=k or 4)
+        docs = search_knowledge(query, k=k or 6)
         sources = [dict(d.metadata) for d in docs]
         chain = build_chain(policy=True)
         if chain is None:
@@ -145,7 +145,7 @@ async def astream_answer(query: str, k: int | None = None):
     relaxed: list[str] = []
 
     if policy:
-        docs = search_knowledge(query, k=k or 4)
+        docs = search_knowledge(query, k=k or 6)
         context = format_kb_context(docs)
     else:
         docs, relaxed = _listing_hits(query, filters, k)
