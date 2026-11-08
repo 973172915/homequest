@@ -1,4 +1,4 @@
-﻿"""潍房智估 · 前端（Streamlit）。
+"""潍房智估 · 前端（Streamlit）。
 
 启动前先起 API：
     uvicorn app.api.main:app --port 8000
@@ -81,10 +81,11 @@ health = api_health()
 def render_login() -> None:
     st.title("🏠 潍房智估")
     st.caption("潍坊二手房智能选房助手")
+
+    # 后端没起来也照样渲染表单：让用户看到界面、知道问题在哪，
+    # 而不是白屏或只有一行错误（CI 里没有后端，测试也要能跑）
     if health.get("status") != "ok":
-        st.error("API 未启动，无法登录")
-        st.code("uvicorn app.api.main:app --port 8000", language="bash")
-        return
+        st.warning("后端未连接，登录会失败。先启动：`uvicorn app.api.main:app --port 8000`")
 
     mode = st.radio("模式", ["登录", "注册"], horizontal=True, label_visibility="collapsed")
     with st.form("auth_form"):
@@ -102,7 +103,7 @@ def render_login() -> None:
                              timeout=20)
         data = resp.json()
     except Exception as exc:
-        st.error(f"请求失败：{exc}")
+        st.error(f"无法连接后端：{exc}")
         return
 
     if resp.status_code != 200:
