@@ -1,4 +1,4 @@
-"""顾问链：意图识别 → 路由 → 生成。
+﻿"""顾问链：意图识别 → 路由 → 生成。
 
 四条支路：
 - find_listing  找房   → 混合检索 + 房源库 RAG
@@ -273,16 +273,18 @@ def _legacy_route(query: str, k: int | None) -> AdvisorResult:
 
 
 def answer(query: str, k: int | None = None,
-           history: list[dict] | None = None) -> AdvisorResult:
+           history: list[dict] | None = None,
+           last_intents: list[str] | None = None) -> AdvisorResult:
     """完整问答：意图识别 → 路由 → 生成。"""
     if llm_available():
-        intent = classify(query, history)
+        intent = classify(query, history, last_intents)
         return _route(intent, query, k, history)
     return _legacy_route(query, k)
 
 
 async def astream_answer(query: str, k: int | None = None,
-                         history: list[dict] | None = None):
+                         history: list[dict] | None = None,
+                         last_intents: list[str] | None = None):
     """流式版本：先产出 meta，再逐字产出文本。
 
     只有「找房 / 政策」需要流式（真实生成），闲聊和追问是一次性文本。
@@ -297,7 +299,7 @@ async def astream_answer(query: str, k: int | None = None,
     # 先给一个阶段提示，避免用户干等意图识别 + 检索的几秒钟
     yield {"type": "stage", "text": "正在理解你的问题…"}
 
-    intent = classify(query, history)
+    intent = classify(query, history, last_intents)
     filters = intent.filters
     intents = intent.intents
 
@@ -305,13 +307,13 @@ async def astream_answer(query: str, k: int | None = None,
     if "chat" in intents or ("estimate" in intents and intent.missing):
         result = _route(intent, query, k, history)
         yield {"type": "meta", "sources": [], "mode": result.mode,
-               "kind": result.kind, "relaxed": []}
+               "kind": result.kind, "relaxed": [], "intent": "+".join(intents)}
         yield {"type": "token", "text": result.answer}
         return
 
     if "estimate" in intents:
         result = _estimate_answer(query, filters)
-        yield {"type": "meta", "sources": [], "mode": "llm", "kind": "estimate", "relaxed": []}
+        yield {"type": "meta", "sources": [], "mode": "llm", "kind": "estimate", "relaxed": [], "intent": "+".join(intents)}
         yield {"type": "token", "text": result.answer}
         return
 
@@ -341,7 +343,7 @@ async def astream_answer(query: str, k: int | None = None,
         yield {"type": "stage", "text": "已检索到 " + " + ".join(stage)}
 
     yield {"type": "meta", "sources": sources, "mode": "llm",
-           "kind": kind, "relaxed": relaxed}
+           "kind": kind, "relaxed": relaxed, "intent": "+".join(intents)}
 
     chain = build_chain(streaming=True, policy=not want_listing, mixed=(kind == "mixed"),
                         history=history)

@@ -43,9 +43,10 @@ def post_json(path: str, payload: dict, timeout: int = 120) -> dict:
     return resp.json()
 
 
-def stream_events(query: str, history: list[dict], k: int):
+def stream_events(query: str, history: list[dict], k: int, last_intents: list[str] | None = None):
     """消费 SSE：先出 meta（房源/模式），再逐字出 token。"""
-    payload = {"query": query, "k": k, "history": history}
+    payload = {"query": query, "k": k, "history": history,
+               "last_intents": last_intents or []}
     with requests.post(
         f"{API_BASE}/advice/stream", json=payload, stream=True, timeout=300
     ) as resp:
@@ -211,6 +212,8 @@ with tab_estimate:
 with tab_advice:
     if "chat" not in st.session_state:
         st.session_state.chat = []
+    if "last_intents" not in st.session_state:
+        st.session_state.last_intents = []
 
     head, tail = st.columns([5, 1])
     with head:
@@ -218,6 +221,7 @@ with tab_advice:
     with tail:
         if st.button("清空", key="btn_clear_chat"):
             st.session_state.chat = []
+            st.session_state.last_intents = []
             st.rerun()
 
     for msg in st.session_state.chat:
@@ -238,7 +242,8 @@ with tab_advice:
                 status = st.empty()
 
                 def tokens():
-                    for evt in stream_events(prompt, st.session_state.chat[:-1], k):
+                    for evt in stream_events(prompt, st.session_state.chat[:-1], k,
+                                             st.session_state.last_intents):
                         kind = evt.get("type")
                         if kind == "stage":
                             status.caption("⏳ " + evt.get("text", ""))
@@ -262,5 +267,11 @@ with tab_advice:
                     st.warning(f"⚠️ 条件（{names}）没有匹配房源，以上为放宽后的结果。")
                 if meta.get("kind") == "mixed":
                     st.caption("✓ 本次回答同时用了房源库和知识库")
+
+                # 记住本轮意图，下一轮带回去（历史文本会被截断，靠这个才能继承）
+                if meta.get("intent"):
+                    st.session_state.last_intents = [
+                        x for x in str(meta["intent"]).split("+") if x
+                    ]
 
             st.session_state.chat.append({"role": "assistant", "content": str(text or "")})

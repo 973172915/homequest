@@ -60,6 +60,13 @@ intents 是数组，可以同时包含多个：
 4. 否定表述：「不要顶楼」「别要一楼」不影响 filters，忽略即可。
 5. 结合对话历史理解指代：「再便宜点」表示在历史条件基础上降低 max_price；「那高新区呢」表示把 district 换成高新区。
 
+多轮意图继承（重要）：
+- 如果用户这句话只是在上一轮基础上改条件（「那100万呢」「再便宜点」「换成高新区」「80万的呢」），
+  必须延续上一轮的 intents，不要因为这句话里没出现「税」字就丢掉 ask_policy。
+- 例：上一轮问「50万能买到什么房，加各种税」，这轮问「那100万呢」
+  → 输出 ["find_listing", "ask_policy"]，filters.max_price = 100。
+- 只有用户明确换了话题（「你好」「满二和满五区别」）时才重新判定意图。
+
 missing 字段：
 - 只有 intents 含 find_listing 才需要判断。
 - 如果 district/community/nearby 全为空，且 max_price 也为空，则 missing 至少包含 "区域或预算"。
@@ -197,8 +204,14 @@ def _normalize(text: str) -> str:
     return unicodedata.normalize("NFKC", text or "")
 
 
-def classify(query: str, history: list[dict] | None = None) -> Intent:
-    """识别意图。history 形如 [{"role": "user"/"assistant", "content": "..."}]。"""
+def classify(query: str, history: list[dict] | None = None,
+             last_intents: list[str] | None = None) -> Intent:
+    """识别意图。
+
+    history 形如 [{"role": "user"/"assistant", "content": "..."}]。
+    last_intents 是上一轮的意图组合——历史文本会被截断（第一轮回答前 500 字全是房源表格，
+    税费部分根本进不了上下文），所以必须把上一轮意图显式带回来。
+    """
     query = _normalize(query)
     llm = get_llm()
     if llm is None:
@@ -210,6 +223,9 @@ def classify(query: str, history: list[dict] | None = None) -> Intent:
         content = str(turn.get("content", ""))[:500]
         if content:
             messages.append((role, content))
+    if last_intents:
+        messages.append(("human", f"（系统提示：上一轮的意图是 {last_intents}，"
+                                  f"如果本轮只是修改条件，请延续它。）"))
     messages.append(("human", query))
 
     try:

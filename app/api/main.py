@@ -1,4 +1,4 @@
-﻿"""潍房智估 API。
+"""潍房智估 API。
 
 接口：
     GET  /health          健康检查（模型、索引、LLM 是否就绪）
@@ -59,6 +59,8 @@ class SearchRequest(BaseModel):
     k: int = Field(10, ge=1, le=50)
     # 多轮对话历史：[{"role": "user"/"assistant", "content": "..."}]
     history: list[dict[str, str]] = Field(default_factory=list)
+    # 上一轮的意图组合，用于多轮继承（历史文本会被截断）
+    last_intents: list[str] = Field(default_factory=list)
 
 
 class Listing(BaseModel):
@@ -153,7 +155,7 @@ def search(req: SearchRequest) -> SearchResponse:
 def advice(req: SearchRequest) -> AdviceResponse:
     t0 = time.perf_counter()
     try:
-        result = answer(req.query, k=req.k, history=req.history)
+        result = answer(req.query, k=req.k, history=req.history, last_intents=req.last_intents)
     except Exception as exc:  # 外部 API 失败要让调用方看到明确原因
         raise HTTPException(status_code=502, detail=f"生成失败：{exc}") from exc
     return AdviceResponse(
@@ -173,7 +175,7 @@ def advice(req: SearchRequest) -> AdviceResponse:
 async def advice_stream(req: SearchRequest) -> StreamingResponse:
     async def event_stream():
         try:
-            async for event in astream_answer(req.query, k=req.k, history=req.history):
+            async for event in astream_answer(req.query, k=req.k, history=req.history, last_intents=req.last_intents):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
