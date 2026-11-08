@@ -23,7 +23,7 @@ print(f"全量: {len(df)} 条, {df['district'].nunique()} 个区县")
 
 # 按区县分层抽样，各区县按比例取
 parts = []
-for district, group in df.groupby("district", sort=False):
+for _district, group in df.groupby("district", sort=False):
     k = max(1, round(len(group) / len(df) * N))
     parts.append(group.sample(n=min(k, len(group)), random_state=SEED))
 
