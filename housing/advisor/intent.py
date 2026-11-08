@@ -205,12 +205,14 @@ def _normalize(text: str) -> str:
 
 
 def classify(query: str, history: list[dict] | None = None,
-             last_intents: list[str] | None = None) -> Intent:
+             last_intents: list[str] | None = None,
+             summary: str = "") -> Intent:
     """识别意图。
 
-    history 形如 [{"role": "user"/"assistant", "content": "..."}]。
-    last_intents 是上一轮的意图组合——历史文本会被截断（第一轮回答前 500 字全是房源表格，
-    税费部分根本进不了上下文），所以必须把上一轮意图显式带回来。
+    history 由上层窗口化（memory.split_history），这里只做单条安全上限，不再粗暴截 500 字
+    —— 之前正是因为截断，把「上一轮算过税」这半句信息切掉了。
+
+    last_intents 是上一轮意图，作为冗余保险；summary 是滚动摘要。
     """
     query = _normalize(query)
     llm = get_llm()
@@ -218,9 +220,11 @@ def classify(query: str, history: list[dict] | None = None,
         return _fallback(query, history)
 
     messages: list[tuple[str, str]] = [("system", SYSTEM_PROMPT)]
-    for turn in (history or [])[-6:]:          # 只带最近 3 轮，控制 token
+    if summary:
+        messages.append(("human", f"（对话摘要，早前几轮聊过的内容：{summary}）"))
+    for turn in (history or []):
         role = "human" if turn.get("role") == "user" else "ai"
-        content = str(turn.get("content", ""))[:500]
+        content = str(turn.get("content", ""))[:2000]   # 安全上限，远大于单条实际长度
         if content:
             messages.append((role, content))
     if last_intents:

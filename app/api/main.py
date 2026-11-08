@@ -61,6 +61,8 @@ class SearchRequest(BaseModel):
     history: list[dict[str, str]] = Field(default_factory=list)
     # 上一轮的意图组合，用于多轮继承（历史文本会被截断）
     last_intents: list[str] = Field(default_factory=list)
+    # 滚动摘要（超过 15 轮的旧对话被压缩到这里）
+    summary: str = Field(default="", max_length=2000)
 
 
 class Listing(BaseModel):
@@ -155,7 +157,8 @@ def search(req: SearchRequest) -> SearchResponse:
 def advice(req: SearchRequest) -> AdviceResponse:
     t0 = time.perf_counter()
     try:
-        result = answer(req.query, k=req.k, history=req.history, last_intents=req.last_intents)
+        result = answer(req.query, k=req.k, history=req.history,
+                        last_intents=req.last_intents, summary=req.summary)
     except Exception as exc:  # 外部 API 失败要让调用方看到明确原因
         raise HTTPException(status_code=502, detail=f"生成失败：{exc}") from exc
     return AdviceResponse(
@@ -175,7 +178,9 @@ def advice(req: SearchRequest) -> AdviceResponse:
 async def advice_stream(req: SearchRequest) -> StreamingResponse:
     async def event_stream():
         try:
-            async for event in astream_answer(req.query, k=req.k, history=req.history, last_intents=req.last_intents):
+            async for event in astream_answer(req.query, k=req.k, history=req.history,
+                                              last_intents=req.last_intents,
+                                              summary=req.summary):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"

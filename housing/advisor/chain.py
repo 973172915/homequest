@@ -19,6 +19,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from housing.advisor.intent import Intent, clarify_question, classify
 from housing.advisor.llm import get_llm, llm_available
+from housing.advisor.memory import split_history, summarize
 from housing.advisor.prompts import (
     MIXED_SYSTEM_PROMPT,
     MIXED_USER_TEMPLATE,
@@ -51,6 +52,7 @@ class AdvisorResult:
     relaxed: list[str] = field(default_factory=list)
     intent: str = ""
     missing: list[str] = field(default_factory=list)
+    summary: str = ""
 
 
 def is_policy_query(query: str, filters: SearchFilters) -> bool:
@@ -272,19 +274,33 @@ def _legacy_route(query: str, k: int | None) -> AdvisorResult:
     return _listing_answer(query, filters, k, None)
 
 
+def _prepare_memory(history: list[dict] | None, summary: str) -> tuple[list[dict], str]:
+    """滑动窗口 + 滚动摘要：超出 15 轮的旧内容压进 summary。"""
+    overflow, recent = split_history(list(history or []))
+    if overflow:
+        summary = summarize(summary, overflow)
+    return recent, summary
+
+
 def answer(query: str, k: int | None = None,
            history: list[dict] | None = None,
-           last_intents: list[str] | None = None) -> AdvisorResult:
+           last_intents: list[str] | None = None,
+           summary: str = "") -> AdvisorResult:
     """完整问答：意图识别 → 路由 → 生成。"""
-    if llm_available():
-        intent = classify(query, history, last_intents)
-        return _route(intent, query, k, history)
-    return _legacy_route(query, k)
+    if not llm_available():
+        return _legacy_route(query, k)
+
+    recent, summary = _prepare_memory(history, summary)
+    intent = classify(query, recent, last_intents, summary)
+    result = _route(intent, query, k, recent)
+    result.summary = summary
+    return result
 
 
 async def astream_answer(query: str, k: int | None = None,
                          history: list[dict] | None = None,
-                         last_intents: list[str] | None = None):
+                         last_intents: list[str] | None = None,
+                         summary: str = ""):
     """流式版本：先产出 meta，再逐字产出文本。
 
     只有「找房 / 政策」需要流式（真实生成），闲聊和追问是一次性文本。
@@ -299,7 +315,8 @@ async def astream_answer(query: str, k: int | None = None,
     # 先给一个阶段提示，避免用户干等意图识别 + 检索的几秒钟
     yield {"type": "stage", "text": "正在理解你的问题…"}
 
-    intent = classify(query, history, last_intents)
+    recent, summary = _prepare_memory(history, summary)
+    intent = classify(query, recent, last_intents, summary)
     filters = intent.filters
     intents = intent.intents
 
@@ -307,13 +324,13 @@ async def astream_answer(query: str, k: int | None = None,
     if "chat" in intents or ("estimate" in intents and intent.missing):
         result = _route(intent, query, k, history)
         yield {"type": "meta", "sources": [], "mode": result.mode,
-               "kind": result.kind, "relaxed": [], "intent": "+".join(intents)}
+               "kind": result.kind, "relaxed": [], "intent": "+".join(intents), "summary": summary}
         yield {"type": "token", "text": result.answer}
         return
 
     if "estimate" in intents:
         result = _estimate_answer(query, filters)
-        yield {"type": "meta", "sources": [], "mode": "llm", "kind": "estimate", "relaxed": [], "intent": "+".join(intents)}
+        yield {"type": "meta", "sources": [], "mode": "llm", "kind": "estimate", "relaxed": [], "intent": "+".join(intents), "summary": summary}
         yield {"type": "token", "text": result.answer}
         return
 
@@ -343,7 +360,7 @@ async def astream_answer(query: str, k: int | None = None,
         yield {"type": "stage", "text": "已检索到 " + " + ".join(stage)}
 
     yield {"type": "meta", "sources": sources, "mode": "llm",
-           "kind": kind, "relaxed": relaxed, "intent": "+".join(intents)}
+           "kind": kind, "relaxed": relaxed, "intent": "+".join(intents), "summary": summary}
 
     chain = build_chain(streaming=True, policy=not want_listing, mixed=(kind == "mixed"),
                         history=history)

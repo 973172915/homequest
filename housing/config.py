@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     bm25_weight: float = 0.3
     vector_weight: float = 0.7
 
+    # ---- 对话记忆 ----
+    # 最近多少轮完整保留（1 轮 = 用户 + 助手）。超出部分压成滚动摘要
+    max_history_turns: int = 15
+
     # ---- 路径 ----
     @property
     def data_raw(self) -> Path:

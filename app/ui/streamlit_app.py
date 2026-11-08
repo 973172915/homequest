@@ -43,10 +43,11 @@ def post_json(path: str, payload: dict, timeout: int = 120) -> dict:
     return resp.json()
 
 
-def stream_events(query: str, history: list[dict], k: int, last_intents: list[str] | None = None):
+def stream_events(query: str, history: list[dict], k: int,
+                  last_intents: list[str] | None = None, summary: str = ""):
     """消费 SSE：先出 meta（房源/模式），再逐字出 token。"""
     payload = {"query": query, "k": k, "history": history,
-               "last_intents": last_intents or []}
+               "last_intents": last_intents or [], "summary": summary}
     with requests.post(
         f"{API_BASE}/advice/stream", json=payload, stream=True, timeout=300
     ) as resp:
@@ -214,6 +215,8 @@ with tab_advice:
         st.session_state.chat = []
     if "last_intents" not in st.session_state:
         st.session_state.last_intents = []
+    if "summary" not in st.session_state:
+        st.session_state.summary = ""
 
     head, tail = st.columns([5, 1])
     with head:
@@ -222,6 +225,7 @@ with tab_advice:
         if st.button("清空", key="btn_clear_chat"):
             st.session_state.chat = []
             st.session_state.last_intents = []
+            st.session_state.summary = ""
             st.rerun()
 
     for msg in st.session_state.chat:
@@ -243,7 +247,8 @@ with tab_advice:
 
                 def tokens():
                     for evt in stream_events(prompt, st.session_state.chat[:-1], k,
-                                             st.session_state.last_intents):
+                                             st.session_state.last_intents,
+                                             st.session_state.summary):
                         kind = evt.get("type")
                         if kind == "stage":
                             status.caption("⏳ " + evt.get("text", ""))
@@ -273,5 +278,8 @@ with tab_advice:
                     st.session_state.last_intents = [
                         x for x in str(meta["intent"]).split("+") if x
                     ]
+                # 服务端把超出 15 轮的旧对话压缩成摘要，这里存下来给下一轮用
+                if meta.get("summary"):
+                    st.session_state.summary = str(meta["summary"])
 
             st.session_state.chat.append({"role": "assistant", "content": str(text or "")})
