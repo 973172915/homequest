@@ -294,6 +294,9 @@ async def astream_answer(query: str, k: int | None = None,
         yield {"type": "token", "text": result.answer}
         return
 
+    # 先给一个阶段提示，避免用户干等意图识别 + 检索的几秒钟
+    yield {"type": "stage", "text": "正在理解你的问题…"}
+
     intent = classify(query, history)
     filters = intent.filters
     intents = intent.intents
@@ -328,6 +331,15 @@ async def astream_answer(query: str, k: int | None = None,
     sources += [{**dict(d.metadata), "type": "knowledge"} for d in kb_docs]
 
     kind = "mixed" if (want_listing and want_policy) else ("listing" if want_listing else "policy")
+
+    stage = []
+    if want_listing:
+        stage.append(f"{len(docs)} 套房源")
+    if want_policy:
+        stage.append(f"{len(kb_docs)} 条政策资料")
+    if stage:
+        yield {"type": "stage", "text": "已检索到 " + " + ".join(stage)}
+
     yield {"type": "meta", "sources": sources, "mode": "llm",
            "kind": kind, "relaxed": relaxed}
 

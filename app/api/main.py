@@ -1,4 +1,4 @@
-"""潍房智估 API。
+﻿"""潍房智估 API。
 
 接口：
     GET  /health          健康检查（模型、索引、LLM 是否就绪）
@@ -57,6 +57,8 @@ app.add_middleware(
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=200, description="自然语言找房需求")
     k: int = Field(10, ge=1, le=50)
+    # 多轮对话历史：[{"role": "user"/"assistant", "content": "..."}]
+    history: list[dict[str, str]] = Field(default_factory=list)
 
 
 class Listing(BaseModel):
@@ -151,7 +153,7 @@ def search(req: SearchRequest) -> SearchResponse:
 def advice(req: SearchRequest) -> AdviceResponse:
     t0 = time.perf_counter()
     try:
-        result = answer(req.query, k=req.k)
+        result = answer(req.query, k=req.k, history=req.history)
     except Exception as exc:  # 外部 API 失败要让调用方看到明确原因
         raise HTTPException(status_code=502, detail=f"生成失败：{exc}") from exc
     return AdviceResponse(
@@ -171,7 +173,7 @@ def advice(req: SearchRequest) -> AdviceResponse:
 async def advice_stream(req: SearchRequest) -> StreamingResponse:
     async def event_stream():
         try:
-            async for event in astream_answer(req.query, k=req.k):
+            async for event in astream_answer(req.query, k=req.k, history=req.history):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"

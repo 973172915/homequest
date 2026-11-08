@@ -43,21 +43,23 @@ def post_json(path: str, payload: dict, timeout: int = 120) -> dict:
     return resp.json()
 
 
-def stream_advice(query: str, k: int):
-    """消费 SSE，先返回 meta（房源），再逐字返回文本。"""
+def stream_events(query: str, history: list[dict], k: int):
+    """消费 SSE：先出 meta（房源/模式），再逐字出 token。"""
+    payload = {"query": query, "k": k, "history": history}
     with requests.post(
-        f"{API_BASE}/advice/stream", json={"query": query, "k": k}, stream=True, timeout=180
+        f"{API_BASE}/advice/stream", json=payload, stream=True, timeout=300
     ) as resp:
         resp.raise_for_status()
         for raw in resp.iter_lines(decode_unicode=True):
             if not raw or not raw.startswith("data: "):
                 continue
-            payload = raw[6:]
-            if payload == "[DONE]":
+            body = raw[6:]
+            if body == "[DONE]":
                 break
-            event = json.loads(payload)
-            if event["type"] == "token":
-                yield event["text"]
+            try:
+                yield json.loads(body)
+            except json.JSONDecodeError:
+                continue
 
 
 health = api_health()
@@ -205,19 +207,60 @@ with tab_estimate:
                             for c in data["contributions"]]
                     st.dataframe(rows, hide_index=True, use_container_width=True)
 
-# ---------------- AI 顾问 ----------------
+# ---------------- AI 顾问（多轮 + 流式） ----------------
 with tab_advice:
-    question = st.text_area(
-        "告诉顾问你的情况",
-        value="预算 80 万，在奎文区想买个两居，要求南北通透，有什么推荐？",
-        height=100,
-    )
+    if "chat" not in st.session_state:
+        st.session_state.chat = []
 
-    if st.button("咨询顾问", type="primary", key="btn_advice"):
+    head, tail = st.columns([5, 1])
+    with head:
+        st.caption("支持多轮对话：可以说「再便宜点」「那高新区呢」；也能一次问找房 + 税费。")
+    with tail:
+        if st.button("清空", key="btn_clear_chat"):
+            st.session_state.chat = []
+            st.rerun()
+
+    for msg in st.session_state.chat:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    prompt = st.chat_input("问问看，比如：50万能买到什么房，加上税费要多少")
+    if prompt:
         if health.get("status") != "ok":
             st.error("请先启动 API 服务")
         else:
-            try:
-                st.write_stream(stream_advice(question, k))
-            except Exception as exc:
-                st.error(f"生成失败：{exc}")
+            st.session_state.chat.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            with st.chat_message("assistant"):
+                meta: dict = {}
+                status = st.empty()
+
+                def tokens():
+                    for evt in stream_events(prompt, st.session_state.chat[:-1], k):
+                        kind = evt.get("type")
+                        if kind == "stage":
+                            status.caption("⏳ " + evt.get("text", ""))
+                        elif kind == "meta":
+                            meta.update(evt)
+                        elif kind == "token":
+                            if status is not None:
+                                status.empty()
+                            yield evt.get("text", "")
+
+                try:
+                    text = st.write_stream(tokens())
+                except Exception as exc:
+                    status.empty()
+                    text = f"生成失败：{exc}"
+                    st.error(text)
+
+                if meta.get("relaxed"):
+                    label = {"community": "指定小区", "社区属性": "户型/装修/电梯/朝向"}
+                    names = "、".join(label.get(r, r) for r in meta["relaxed"])
+                    st.warning(f"⚠️ 条件（{names}）没有匹配房源，以上为放宽后的结果。")
+                if meta.get("kind") == "mixed":
+                    st.caption("✓ 本次回答同时用了房源库和知识库")
+
+            st.session_state.chat.append({"role": "assistant", "content": str(text or "")})

@@ -23,4 +23,6 @@ def test_streamlit_app_renders_without_exception():
     assert not at.exception, f"页面抛异常：{[str(e.value) for e in at.exception]}"
     assert [t.label for t in at.tabs] == ["🔍 找房", "💰 估价", "💬 AI 顾问"]
     assert any(b.label == "搜索" for b in at.button)
-    assert any(b.label == "咨询顾问" for b in at.button)
+    assert any(b.label == "估算价格" for b in at.button)
+    # 顾问页改成了对话式，用 chat_input 而不是按钮
+    assert len(at.chat_input) == 1
