@@ -1,4 +1,4 @@
-﻿"""顾问链：意图识别 → 路由 → 生成。
+"""顾问链：意图识别 → 路由 → 生成。
 
 四条支路：
 - find_listing  找房   → 混合检索 + 房源库 RAG
@@ -7,7 +7,7 @@
 - chat          闲聊   → 直接回复 + 引导回房产
 
 有 API Key 时用 LLM 做意图识别；没有则降级为规则版（关键词 + parse_query），
-保证面试官 clone 下来不配密钥也能跑通。
+保证 clone 下来不配密钥也能跑通。
 """
 
 from __future__ import annotations

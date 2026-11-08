@@ -81,7 +81,7 @@ Document(
 - 用户问「东方天韵 130 平的房子」，切开后向量里只剩半套房，召回直接崩；
 - 元数据要跟着正文走，切块会让 metadata 复制多份，过滤逻辑变复杂。
 
-**这是一条要写进 README 的设计决策**——面试时能讲「我知道什么时候不该切块」，比会用 splitter 值钱得多。
+**这条决定了整个检索质量**——什么时候不该切块，比会不会调 splitter 更重要。
 
 ### 2.2 库 B：知识库（政策/税费/贷款，**必须切块**）
 
@@ -163,7 +163,7 @@ def rerank(docs, query_price_range, query_area):
     return [d for _, d in sorted(scored, key=lambda x: -x[0])]
 ```
 
-> **面试讲点**：向量检索解决「语义」，BM25 解决「精确词」（小区名、学校名），业务重排解决「数字条件」。三层各司其职，比「上了一个 RAG」高级得多。
+> **分工原则**：向量检索解决「语义」，BM25 解决「精确词」（小区名、学校名），业务重排解决「数字条件」。三层各司其职。
 
 ---
 
@@ -296,5 +296,5 @@ sentence-transformers pandas pydantic-settings fastapi
 ## 十、要注意的三个坑
 
 1. **`deepseek-flash` 默认开思考模式**，做 RAG 生成时会先输出一长段推理，流式体验变怪。简单问答建议 `reasoning_effort="low"` 或关闭思考模式。
-2. **LangChain 版本漂移快**，`EnsembleRetriever` 的 import 路径在不同版本有差异，必须用 `uv.lock` 锁版本，否则面试官 clone 下来跑不通。
-3. **别把 LangChain 当黑盒**：`VectorstoreIndexCreator` 这类一行式封装面试官一眼看穿。用 LCEL 显式拼装，每个环节都能讲清楚。
+2. **LangChain 版本漂移快**，`EnsembleRetriever` 的 import 路径在不同版本有差异，必须用 `uv.lock` 锁版本，否则 clone 下来跑不通。
+3. **别把 LangChain 当黑盒**：`VectorstoreIndexCreator` 这类一行式封装会隐藏关键环节。用 LCEL 显式拼装，每个环节都可控、可测。

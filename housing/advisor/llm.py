@@ -1,6 +1,6 @@
 """LLM 工厂：没有 Key 时返回 None，由上层降级为模板摘要。
 
-这样面试官 clone 项目后不配密钥也能跑通演示。
+这样 clone 项目后不配密钥也能跑通演示。
 """
 
 from __future__ import annotations
