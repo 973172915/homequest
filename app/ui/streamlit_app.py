@@ -68,6 +68,14 @@ def stream_events(query: str, history: list[dict], k: int,
 
 health = api_health()
 
+# 会话要在侧边栏渲染前就确定，否则首次打开侧边栏是空的
+if "last_intents" not in st.session_state:
+    st.session_state.last_intents = []
+_current = st.session_state.get("session_id")
+if not _current or store.get(_current) is None:
+    st.session_state.session_id = store.create()
+    st.session_state.last_intents = []
+
 # ---------------- 侧边栏 ----------------
 with st.sidebar:
     st.title("🏠 潍房智估")
@@ -238,28 +246,12 @@ with tab_estimate:
 
 # ---------------- AI 顾问（多轮 + 流式 + 会话） ----------------
 with tab_advice:
-    if "last_intents" not in st.session_state:
-        st.session_state.last_intents = []
-
-    # 当前会话：没有就自动建一个
     session_id = st.session_state.get("session_id")
-    if not session_id or store.get(session_id) is None:
-        session_id = store.create()
-        st.session_state.session_id = session_id
-        st.session_state.last_intents = []
-
     session = store.get(session_id) or {"messages": [], "summary": "", "title": "新对话"}
     history = session["messages"]
 
-    head, tail = st.columns([5, 1])
-    with head:
-        st.caption(f"**{session['title']}** · 支持多轮（「再便宜点」「那高新区呢」），"
-                   f"也能一次问找房 + 税费。会话自动保存。")
-    with tail:
-        if st.button("新会话", key="btn_new_chat"):
-            st.session_state.session_id = store.create()
-            st.session_state.last_intents = []
-            st.rerun()
+    st.caption(f"**{session['title']}** · 支持多轮（「再便宜点」「那高新区呢」），"
+               f"也能一次问找房 + 税费。会话自动保存，在左侧切换。")
 
     if not history:
         st.info("👋 试试这样问：**预算50万能买到什么房，加上税费要多少**")
