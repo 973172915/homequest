@@ -167,3 +167,32 @@ def test_policy_question_routes_to_knowledge():
 def test_listing_question_routes_to_search():
     q = "奎文区 100平以内 精装两居 预算80万"
     assert is_policy_query(q, parse_query(q)) is False
+
+
+# ---------------- 估价 ----------------
+def test_estimate_interval_and_contributions():
+    """模型存在时应给出合理单价区间和影响因素；不存在则跳过。"""
+    from housing.estimate.model import estimate
+
+    result = estimate("东方天韵", "奎文区", "新华路北", 100.0, 2)
+    if result is None:
+        pytest.skip("估价模型尚未训练")
+
+    assert 1000 < result.unit_price < 60000
+    assert result.low < result.unit_price < result.high
+    assert len(result.contributions) <= 5
+    # 单价 ≈ 该城市二手房的实际量级
+    assert 3000 < result.unit_price < 20000
+
+
+def test_estimate_area_scales_total_price():
+    """面积翻倍，总价应接近翻倍（单价模型 + 面积换算）。"""
+    from housing.estimate.model import estimate
+
+    small = estimate("恒大名都", "高新技术产业开发区", "市府东南", 100.0, 3)
+    big = estimate("恒大名都", "高新技术产业开发区", "市府东南", 200.0, 3)
+    if small is None or big is None:
+        pytest.skip("估价模型尚未训练")
+
+    ratio = (big.unit_price * 200) / (small.unit_price * 100)
+    assert 1.5 < ratio < 2.5

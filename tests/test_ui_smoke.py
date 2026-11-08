@@ -21,6 +21,6 @@ def test_streamlit_app_renders_without_exception():
     at.run()
 
     assert not at.exception, f"页面抛异常：{[str(e.value) for e in at.exception]}"
-    assert [t.label for t in at.tabs] == ["🔍 找房", "💬 AI 顾问"]
+    assert [t.label for t in at.tabs] == ["🔍 找房", "💰 估价", "💬 AI 顾问"]
     assert any(b.label == "搜索" for b in at.button)
     assert any(b.label == "咨询顾问" for b in at.button)

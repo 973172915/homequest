@@ -60,6 +60,7 @@ langgraph-checkpoint==4.3.1
 langgraph-prebuilt==1.1.1
 langgraph-sdk==0.4.14
 langsmith==0.14.17
+lightgbm==4.7.0
 markdown-it-py==4.2.0
 markupsafe==3.0.3
 mdurl==0.1.2

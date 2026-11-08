@@ -23,6 +23,9 @@ faiss-cpu>=1.9
 # 向量化
 sentence-transformers>=3.0
 
+# 估价模型
+lightgbm>=4.0
+
 # 配置与服务
 pydantic>=2.7
 pydantic-settings>=2.3

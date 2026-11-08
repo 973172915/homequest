@@ -93,6 +93,29 @@ class AdviceResponse(BaseModel):
     sources: list[dict[str, Any]]
 
 
+class EstimateRequest(BaseModel):
+    community: str = Field(..., min_length=1, max_length=50)
+    district: str = Field("奎文区", max_length=30)
+    nearby: str = Field("", max_length=30)
+    area: float = Field(..., gt=10, le=600, description="建筑面积（㎡）")
+    rooms: int = Field(2, ge=1, le=8)
+    baths: int = Field(1, ge=0, le=5)
+    floor_level: str = Field("中", pattern="^(低|中|高)$")
+    decoration: str = Field("精装", pattern="^(毛坯|简装|精装|其他)$")
+    elevator: bool = True
+    south_north: bool = True
+    total_floors: int = Field(6, ge=1, le=60)
+
+
+class EstimateResponse(BaseModel):
+    unit_price: float
+    total_price_wan: float
+    low: float
+    high: float
+    contributions: list[dict[str, Any]]
+    note: str = "挂牌价估算，非成交价"
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
@@ -151,3 +174,49 @@ async def advice_stream(req: SearchRequest) -> StreamingResponse:
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/estimate", response_model=EstimateResponse)
+def estimate_price(req: EstimateRequest) -> EstimateResponse:
+    """单套房估价：返回单价、总价、区间和主要影响因素。"""
+    from housing.estimate.model import estimate
+
+    result = estimate(
+        community=req.community,
+        district=req.district,
+        nearby=req.nearby,
+        area=req.area,
+        rooms=req.rooms,
+        floor_level=req.floor_level,
+        decoration=req.decoration,
+        elevator=req.elevator,
+        south_north=req.south_north,
+        total_floors=req.total_floors,
+        baths=req.baths,
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=503,
+            detail="估价模型未训练，先运行：python scripts/train_model.py",
+        )
+    return EstimateResponse(
+        unit_price=result.unit_price,
+        total_price_wan=round(result.unit_price * req.area / 10000, 1),
+        low=result.low,
+        high=result.high,
+        contributions=result.contributions,
+    )
+
+
+@app.get("/model/info")
+def model_info() -> dict[str, Any]:
+    """模型评估指标，给界面展示用。"""
+    import json as _json
+
+    from housing.config import settings as _settings
+
+    meta_path = _settings.models_dir / "price_model_meta.json"
+    if not meta_path.exists():
+        return {"trained": False}
+    meta = _json.loads(meta_path.read_text(encoding="utf-8"))
+    return {"trained": True, **meta}

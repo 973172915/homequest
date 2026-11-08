@@ -8,6 +8,7 @@
 | 检索条件命中率 | **95.5%** | Top10 全部满足硬条件；严格模式（不含触发放宽）**100%** |
 | 检索延迟 P50 / P95 | **946ms / 981ms** | 18332 条房源，CPU 单机 |
 | 生成幻觉率 | **0%** (6/6) | 回答中的房源编号、价格全部可回溯到检索结果 |
+| 估价误差 MAPE | **10.3%** / **14.7%** | LightGBM，随机切分 / 按小区分组切分（新小区场景） |
 
 > 评测脚本与数据都在 `eval/`，`python eval/run_eval.py` 可复现。报告见 [eval/results/eval_report.md](eval/results/eval_report.md)。
 
@@ -26,6 +27,11 @@
 **📚 交易知识问答**
 
 问「买一套 100 万的二手房，满两年，契税要交多少」，自动路由到知识库（税费、贷款、过户、满二满五、选房常识），答案带计算过程和出处。
+
+**💰 智能估价**
+
+输入小区、面积、户型、楼层、装修，给出**单价 + 总价 + 80% 区间 + Top5 影响因素**。
+模型是 LightGBM，目标是 `log(单价)`，可解释性用 LightGBM 原生的 `pred_contrib`（等价 SHAP，不额外引入依赖）。
 
 ---
 
@@ -151,6 +157,30 @@ jieba 只发布源码包，安装要本地编译 wheel。中文检索并不一�
 
 ---
 
+## 估价模型
+
+目标不是「预测总价」，而是 `log(单价)`——总价 = 单价 × 面积，面积作为特征进去就够了，这样不同面积的样本能放在同一尺度上学。
+
+两种切分都跑，因为差距本身就是结论：
+
+| 方法 | 切分方式 | MAPE | MAE（元/㎡） | R² |
+|---|---|---|---|---|
+| 全局中位数 | 按小区分组 | 21.76% | — | — |
+| 区县中位数 | 按小区分组 | 18.86% | — | — |
+| 商圈中位数 | 按小区分组 | 18.14% | — | — |
+| **LightGBM** | 随机切分 | **10.34%** | 742 | 0.71 |
+| **LightGBM** | 按小区分组切分 | **14.72%** | 1088 | 0.51 |
+
+- **随机切分偏乐观**：同一小区的房源同时进了训练集和测试集，模型等于「见过这个小区」。
+- **按小区分组切分才是线上场景**：用户问的房子往往来自模型没见过的楼盘，这才是真实精度。
+- 两者 4.4 个点的差距，就是「小区记忆」带来的虚高。
+
+```bash
+python scripts/train_model.py   # 训练 + 生成 eval/results/model_eval.md
+```
+
+---
+
 ## 评测
 
 30 条人工标注的评测集（`eval/qa_pairs.jsonl`），覆盖 8 个区县、4 个商圈、2 个点名小区，以及 8 条政策问题。
@@ -188,14 +218,16 @@ housing/
 │   ├── retriever.py       # 解析 + 混合检索 + 硬过滤 + 重排
 │   ├── knowledge.py       # 知识库检索
 │   └── faiss_store.py     # FAISS 读写（绕过中文路径问题）
+├── estimate/
+│   └── model.py           # LightGBM 估价 + pred_contrib 解释
 └── advisor/
     ├── prompts.py         # 防幻觉提示词
     ├── llm.py             # DeepSeek 客户端 + 降级
     └── chain.py           # LCEL 链 + 问题路由
-app/api/main.py            # FastAPI 4 个接口
-app/ui/streamlit_app.py    # 界面
+app/api/main.py            # FastAPI 5 个接口（含 /estimate）
+app/ui/streamlit_app.py    # 界面（找房 / 估价 / 顾问 三个页签）
 eval/                      # 评测集 + 评测脚本 + 结果
-scripts/                   # 数据体检、建索引、检索冒烟
+scripts/                   # 数据体检、建索引、训练、检索冒烟
 run.py                     # 一键启动
 ```
 
@@ -229,7 +261,7 @@ run.py                     # 一键启动
 
 ## Roadmap
 
-- [ ] 估价模块：LightGBM 预测单价，作为顾问的 `estimate_price` 工具（基线 MAPE 12.7%）
-- [ ] LangChain `@tool` + 工具调用编排
+- [x] 估价模块：LightGBM 预测单价 + interval + 影响因素（MAPE 10.3% / 14.7%）
+- [ ] 把估价接成 LangChain `@tool`，让顾问自己决定何时调用
 - [ ] MCP Server：把房源查询暴露成标准工具
 - [ ] Langfuse 埋点：token / 延迟 / 成本

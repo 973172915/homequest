@@ -76,7 +76,7 @@ with st.sidebar:
     st.divider()
     k = st.slider("返回房源数量", 3, 20, 8)
 
-tab_search, tab_advice = st.tabs(["🔍 找房", "💬 AI 顾问"])
+tab_search, tab_estimate, tab_advice = st.tabs(["🔍 找房", "💰 估价", "💬 AI 顾问"])
 
 # ---------------- 找房 ----------------
 with tab_search:
@@ -129,6 +129,72 @@ with tab_search:
                                 f"<div class='muted'>{item['unit_price']:.0f} 元/㎡</div>",
                                 unsafe_allow_html=True,
                             )
+
+# ---------------- 估价 ----------------
+with tab_estimate:
+    st.caption("基于 1.8 万条挂牌数据训练的 LightGBM 模型：随机切分 MAPE 10.3%，"
+               "按小区分组切分 14.7%（新小区场景）。结果为挂牌价估算，非成交价。")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        est_community = st.text_input("小区", value="东方天韵", key="est_community")
+        est_district = st.selectbox(
+            "区县",
+            ["奎文区", "潍城区", "坊子区", "寒亭区", "高新技术产业开发区",
+             "经济技术开发区", "寿光市", "青州市"],
+            key="est_district",
+        )
+    with c2:
+        est_area = st.number_input("建筑面积（㎡）", min_value=20.0, max_value=500.0,
+                                   value=100.0, step=1.0, key="est_area")
+        est_rooms = st.selectbox("户型", [1, 2, 3, 4, 5], index=1, key="est_rooms")
+    with c3:
+        est_floor = st.radio("楼层", ["低", "中", "高"], index=1, horizontal=True, key="est_floor")
+        est_decoration = st.selectbox("装修", ["毛坯", "简装", "精装", "其他"],
+                                      index=2, key="est_decoration")
+
+    c4, c5, c6 = st.columns(3)
+    with c4:
+        est_elevator = st.checkbox("有电梯", value=True, key="est_elevator")
+    with c5:
+        est_south_north = st.checkbox("南北通透", value=True, key="est_sn")
+    with c6:
+        est_total_floors = st.number_input("总层数", min_value=1, max_value=60,
+                                           value=11, key="est_tf")
+
+    if st.button("估算价格", type="primary", key="btn_estimate"):
+        if health.get("status") != "ok":
+            st.error("请先启动 API 服务")
+        else:
+            try:
+                data = post_json("/estimate", {
+                    "community": est_community,
+                    "district": est_district,
+                    "nearby": "",
+                    "area": est_area,
+                    "rooms": est_rooms,
+                    "baths": 1,
+                    "floor_level": est_floor,
+                    "decoration": est_decoration,
+                    "elevator": est_elevator,
+                    "south_north": est_south_north,
+                    "total_floors": int(est_total_floors),
+                })
+            except Exception as exc:
+                st.error(f"估价失败：{exc}")
+                data = None
+
+            if data:
+                left, right = st.columns([1, 2])
+                with left:
+                    st.metric("估算单价", f"{data['unit_price']:.0f} 元/㎡")
+                    st.metric("估算总价", f"{data['total_price_wan']:.1f} 万")
+                    st.caption(f"80% 区间：{data['low']:.0f} ~ {data['high']:.0f} 元/㎡")
+                with right:
+                    st.markdown("**主要影响因素**")
+                    rows = [{"特征": c["feature"], "影响": c["impact_pct"]}
+                            for c in data["contributions"]]
+                    st.dataframe(rows, hide_index=True, use_container_width=True)
 
 # ---------------- AI 顾问 ----------------
 with tab_advice:
