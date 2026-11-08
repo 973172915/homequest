@@ -98,6 +98,15 @@ with tab_search:
                     data = None
 
             if data:
+                relaxed = data.get("relaxed") or []
+                if relaxed:
+                    label = {"community": "指定小区", "社区属性": "户型/装修/电梯/朝向"}
+                    names = "、".join(label.get(r, r) for r in relaxed)
+                    st.warning(
+                        f"⚠️ 你指定的条件（**{names}**）在库里没有匹配房源，"
+                        f"以下为放宽该条件后的结果，不是精确命中。"
+                    )
+
                 filters = data.get("filters") or {}
                 if filters:
                     st.markdown(

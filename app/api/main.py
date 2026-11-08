@@ -87,7 +87,9 @@ class AdviceResponse(BaseModel):
     query: str
     mode: str
     kind: str
+    intent: str = ""
     relaxed: list[str]
+    missing: list[str] = []
     elapsed_ms: int
     answer: str
     sources: list[dict[str, Any]]
@@ -156,7 +158,9 @@ def advice(req: SearchRequest) -> AdviceResponse:
         query=req.query,
         mode=result.mode,
         kind=result.kind,
+        intent=result.intent,
         relaxed=result.relaxed,
+        missing=result.missing,
         elapsed_ms=int((time.perf_counter() - t0) * 1000),
         answer=result.answer,
         sources=result.sources,
