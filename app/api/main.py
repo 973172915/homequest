@@ -17,7 +17,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -124,6 +124,78 @@ class EstimateResponse(BaseModel):
     note: str = "挂牌价估算，非成交价"
 
 
+# ---------------- 认证 ----------------
+
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=2, max_length=20)
+    password: str = Field(..., min_length=6, max_length=64)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=20)
+    password: str = Field(..., min_length=1, max_length=64)
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user_id: int
+    username: str
+
+
+def current_user(authorization: str | None = Header(default=None)) -> int:
+    """从 `Authorization: Bearer <token>` 解析用户；无效返回 401。"""
+    from housing.storage.users import resolve_token
+
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="未登录")
+    user_id = resolve_token(authorization.split(" ", 1)[1].strip())
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
+    return user_id
+
+
+@app.post("/auth/register", response_model=AuthResponse)
+def register(req: RegisterRequest) -> AuthResponse:
+    from housing.storage.users import issue_token
+    from housing.storage.users import register as do_register
+
+    user_id, error = do_register(req.username, req.password)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail=error)
+    return AuthResponse(token=issue_token(user_id), user_id=user_id,
+                        username=req.username.strip())
+
+
+@app.post("/auth/login", response_model=AuthResponse)
+def login(req: LoginRequest) -> AuthResponse:
+    from housing.storage.users import issue_token, verify
+
+    user_id = verify(req.username, req.password)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    return AuthResponse(token=issue_token(user_id), user_id=user_id,
+                        username=req.username.strip())
+
+
+@app.get("/auth/me")
+def me(user_id: int = Depends(current_user)) -> dict[str, Any]:
+    from housing.storage.users import get_user
+
+    user = get_user(user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="用户不存在")
+    return user
+
+
+@app.post("/auth/logout")
+def logout(authorization: str | None = Header(default=None)) -> dict[str, str]:
+    from housing.storage.users import revoke_token
+
+    if authorization and authorization.lower().startswith("bearer "):
+        revoke_token(authorization.split(" ", 1)[1].strip())
+    return {"status": "ok"}
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
@@ -134,7 +206,7 @@ def health() -> dict[str, Any]:
 
 
 @app.post("/search", response_model=SearchResponse)
-def search(req: SearchRequest) -> SearchResponse:
+def search(req: SearchRequest, user_id: int = Depends(current_user)) -> SearchResponse:
     from housing.ingest.build_docs import load_listing_documents
     from housing.search.retriever import parse_query, search_with_flags
 
@@ -154,7 +226,7 @@ def search(req: SearchRequest) -> SearchResponse:
 
 
 @app.post("/advice", response_model=AdviceResponse)
-def advice(req: SearchRequest) -> AdviceResponse:
+def advice(req: SearchRequest, user_id: int = Depends(current_user)) -> AdviceResponse:
     t0 = time.perf_counter()
     try:
         result = answer(req.query, k=req.k, history=req.history,
@@ -175,7 +247,7 @@ def advice(req: SearchRequest) -> AdviceResponse:
 
 
 @app.post("/advice/stream")
-async def advice_stream(req: SearchRequest) -> StreamingResponse:
+async def advice_stream(req: SearchRequest, user_id: int = Depends(current_user)) -> StreamingResponse:
     async def event_stream():
         try:
             async for event in astream_answer(req.query, k=req.k, history=req.history,
@@ -190,7 +262,7 @@ async def advice_stream(req: SearchRequest) -> StreamingResponse:
 
 
 @app.post("/estimate", response_model=EstimateResponse)
-def estimate_price(req: EstimateRequest) -> EstimateResponse:
+def estimate_price(req: EstimateRequest, user_id: int = Depends(current_user)) -> EstimateResponse:
     """单套房估价：返回单价、总价、区间和主要影响因素。"""
     from housing.estimate.model import estimate
 

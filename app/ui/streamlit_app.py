@@ -1,4 +1,4 @@
-"""潍房智估 · 前端（Streamlit）。
+﻿"""潍房智估 · 前端（Streamlit）。
 
 启动前先起 API：
     uvicorn app.api.main:app --port 8000
@@ -39,8 +39,14 @@ def api_health() -> dict:
         return {"status": "down", "error": str(exc)}
 
 
+def auth_headers() -> dict[str, str]:
+    token = st.session_state.get("token")
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
 def post_json(path: str, payload: dict, timeout: int = 120) -> dict:
-    resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout)
+    resp = requests.post(f"{API_BASE}{path}", json=payload,
+                         headers=auth_headers(), timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
@@ -51,8 +57,11 @@ def stream_events(query: str, history: list[dict], k: int,
     payload = {"query": query, "k": k, "history": history,
                "last_intents": last_intents or [], "summary": summary}
     with requests.post(
-        f"{API_BASE}/advice/stream", json=payload, stream=True, timeout=300
+        f"{API_BASE}/advice/stream", json=payload, headers=auth_headers(),
+        stream=True, timeout=300,
     ) as resp:
+        if resp.status_code == 401:
+            raise PermissionError("登录已过期，请重新登录")
         resp.raise_for_status()
         for raw in resp.iter_lines(decode_unicode=True):
             if not raw or not raw.startswith("data: "):
@@ -68,12 +77,58 @@ def stream_events(query: str, history: list[dict], k: int,
 
 health = api_health()
 
+
+def render_login() -> None:
+    st.title("🏠 潍房智估")
+    st.caption("潍坊二手房智能选房助手")
+    if health.get("status") != "ok":
+        st.error("API 未启动，无法登录")
+        st.code("uvicorn app.api.main:app --port 8000", language="bash")
+        return
+
+    mode = st.radio("模式", ["登录", "注册"], horizontal=True, label_visibility="collapsed")
+    with st.form("auth_form"):
+        username = st.text_input("用户名", placeholder="2~20 个字符")
+        password = st.text_input("密码", type="password", placeholder="至少 6 位")
+        submitted = st.form_submit_button(mode, type="primary")
+
+    if not submitted:
+        return
+
+    path = "/auth/login" if mode == "登录" else "/auth/register"
+    try:
+        resp = requests.post(f"{API_BASE}{path}",
+                             json={"username": username, "password": password},
+                             timeout=20)
+        data = resp.json()
+    except Exception as exc:
+        st.error(f"请求失败：{exc}")
+        return
+
+    if resp.status_code != 200:
+        st.error(data.get("detail", "登录失败"))
+        return
+
+    st.session_state.token = data["token"]
+    st.session_state.username = data["username"]
+    st.session_state.user_id = data["user_id"]
+    st.session_state.session_id = None
+    st.session_state.last_intents = []
+    st.rerun()
+
+
+if not st.session_state.get("token"):
+    render_login()
+    st.stop()
+
+USER_ID = int(st.session_state["user_id"])
+
 # 会话要在侧边栏渲染前就确定，否则首次打开侧边栏是空的
 if "last_intents" not in st.session_state:
     st.session_state.last_intents = []
 _current = st.session_state.get("session_id")
-if not _current or store.get(_current) is None:
-    st.session_state.session_id = store.create()
+if not _current or store.get(_current, USER_ID) is None:
+    st.session_state.session_id = store.create(user_id=USER_ID)
     st.session_state.last_intents = []
 
 VIEWS = ["💬 AI 顾问", "🔍 找房", "💰 估价"]
@@ -81,7 +136,16 @@ VIEWS = ["💬 AI 顾问", "🔍 找房", "💰 估价"]
 # ---------------- 侧边栏 ----------------
 with st.sidebar:
     st.title("🏠 潍房智估")
-    st.caption("潍坊二手房智能选房助手")
+    st.caption(f"已登录：**{st.session_state.get('username', '')}**")
+    if st.button("退出登录", use_container_width=True, key="btn_logout"):
+        try:
+            requests.post(f"{API_BASE}/auth/logout", headers=auth_headers(), timeout=10)
+        except Exception:
+            pass
+        for key in ("token", "username", "user_id", "session_id", "last_intents"):
+            st.session_state.pop(key, None)
+        st.rerun()
+
     if health.get("status") == "ok":
         st.success("API 在线")
         st.caption(f"AI 模型：{'已就绪' if health.get('llm') else '未配置（降级模式）'}")
@@ -98,11 +162,11 @@ with st.sidebar:
     st.divider()
     st.markdown("**会话**")
     if st.button("＋ 新建会话", use_container_width=True, key="btn_new_session"):
-        st.session_state.session_id = store.create()
+        st.session_state.session_id = store.create(user_id=USER_ID)
         st.session_state.last_intents = []
         st.rerun()
 
-    for sess in store.list_all(limit=20):
+    for sess in store.list_all(USER_ID, limit=20):
         active = sess["id"] == st.session_state.get("session_id")
         c1, c2 = st.columns([5, 1])
         if c1.button(("● " if active else "") + sess["title"],
@@ -111,7 +175,7 @@ with st.sidebar:
             st.session_state.last_intents = []
             st.rerun()
         if c2.button("🗑", key=f"del_{sess['id']}"):
-            store.delete(sess["id"])
+            store.delete(sess["id"], USER_ID)
             if st.session_state.get("session_id") == sess["id"]:
                 st.session_state.session_id = None
             st.rerun()
@@ -236,7 +300,7 @@ def render_estimate() -> None:
 # ---------------- 视图 3：AI 顾问（多轮 + 流式 + 会话） ----------------
 def render_chat() -> None:
     session_id = st.session_state.get("session_id")
-    session = store.get(session_id) or {"messages": [], "summary": "", "title": "新对话"}
+    session = store.get(session_id, USER_ID) or {"messages": [], "summary": "", "title": "新对话"}
     history = session["messages"]
 
     st.caption(f"**{session['title']}** · 支持多轮（「再便宜点」「那高新区呢」），"
@@ -258,9 +322,9 @@ def render_chat() -> None:
         st.error("请先启动 API 服务")
         return
 
-    store.add_message(session_id, "user", prompt)
+    store.add_message(session_id, "user", prompt, USER_ID)
     if not history:
-        store.rename(session_id, store.auto_title(prompt))
+        store.rename(session_id, store.auto_title(prompt), USER_ID)
 
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -301,9 +365,9 @@ def render_chat() -> None:
                 x for x in str(meta["intent"]).split("+") if x
             ]
 
-    store.add_message(session_id, "assistant", str(text or ""))
+    store.add_message(session_id, "assistant", str(text or ""), USER_ID)
     if meta.get("summary"):
-        store.set_summary(session_id, str(meta["summary"]))
+        store.set_summary(session_id, str(meta["summary"]), USER_ID)
     st.rerun()
 
 
